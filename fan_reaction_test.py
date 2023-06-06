@@ -1,23 +1,3 @@
-#!/usr/bin/env python3
-# Copyright 2019 Canonical Ltd.
-# Written by:
-#   Maciej Kisielewski <maciej.kisielewski@canonical.com>
-#
-# This is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3,
-# as published by the Free Software Foundation.
-#
-# This file is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this file.  If not, see <http://www.gnu.org/licenses/>.
-"""
-This program checks if the system's fans react to the CPU load applied.
-"""
-
 import glob
 import hashlib
 import multiprocessing
@@ -25,37 +5,31 @@ import os
 import random
 import time
 
-
 class FanMonitor:
-    """Device that reports fan RPM or something correlating to that."""
     def __init__(self):
-        """Use heuristics to find something that we can read."""
         self.hwmons = []
         self._fan_paths = glob.glob('/sys/class/hwmon/hwmon*/fan*_input')
-        # All entries (except name) under /sys/class/hwmon/hwmon/* are optional
-        # and should only be created in a given driver if the chip has
-        # the feature.
-        # Use fan*_input is because the "thinkpad_hwmon" driver is report
-        # fan_input only. If there is any driver has different implementation
-        # then may need to check other entries in the future.
+        print("####################")
+        print("self._fan_paths: ", self._fan_paths)
         for i in self._fan_paths:
             device = os.path.join(os.path.dirname(i), 'device')
             device_path = os.path.realpath(device)
-            # Get the class of pci device of hwmon whether is GPU.
             if "pci" in device_path:
                 pci_class_path = os.path.join(device, 'class')
+                print("pci_class_path: ", pci_class_path)
                 try:
                     with open(pci_class_path, 'r') as _file:
                         pci_class = _file.read().splitlines()
                         pci_device_class = (
                             int(pci_class[0], base=16) >> 16) & 0xff
-                        """Make sure the fan is not on graphic card"""
                         if pci_device_class == 3:
                             continue
                 except OSError:
                     print('Not able to access {}'.format(pci_class_path))
                     continue
             self.hwmons.append(i)
+            
+        print("self.hwmons: ", self.hwmons)
         if not self.hwmons:
             print('Fan monitoring interface not found in SysFS')
             raise SystemExit(0)
@@ -81,7 +55,6 @@ class FanMonitor:
         for k, v in acc.items():
             acc[k] /= period + 1
         return acc
-
 
 class Stressor:
     def __init__(self, thread_count=None):
@@ -117,7 +90,6 @@ class Stressor:
             new_digest = hasher.digest()
             # use the newly obtained digest as the new data to the hasher
             hasher.update(new_digest)
-
 
 def main():
     """Entry point."""
@@ -180,7 +152,6 @@ def main():
     # inverse logic, returning True would mean return code of 1
     if not (rpm_rose_during_stress and rpm_dropped_during_cooling):
         raise SystemExit("Fans did not react to stress expectedly")
-
 
 if __name__ == '__main__':
     main()
