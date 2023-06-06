@@ -25,7 +25,6 @@ from fan_reaction_test import FanMonitor
 
 
 class FanMonitorTests(unittest.TestCase):
-
     """Tests for several type of sysfs hwmon fan files."""
 
     @mock.patch('glob.glob')
