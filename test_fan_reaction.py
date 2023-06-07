@@ -1,19 +1,4 @@
 #!/usr/bin/env python3
-# Copyright 2020 Canonical Ltd.
-# Written by:
-#   Sylvain Pineau <sylvain.pineau@canonical.com>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3,
-# as published by the Free Software Foundation.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import unittest
@@ -21,12 +6,64 @@ from unittest import mock
 from unittest.mock import patch, mock_open
 import tempfile
 
-from fan_reaction_test import FanMonitor
+import glob
+import hashlib
+import multiprocessing
+import os
+import random
+import time
+
+class FanMonitor:
+    def __init__(self):
+        self.hwmons = []
+        self._fan_paths = glob.glob('/sys/class/hwmon/hwmon*/fan*_input')
+        for i in self._fan_paths:
+            device = os.path.join(os.path.dirname(i), 'device')
+            device_path = os.path.realpath(device)
+            print("1. device_path: ", device_path)
+            if "pci" in device_path:
+                pci_class_path = os.path.join(device, 'class')
+                print("2. pci_class_path: ", pci_class_path)
+                try:
+                    with open(pci_class_path, 'r') as _file:
+                        pci_class = _file.read().splitlines()
+                        pci_device_class = (
+                            int(pci_class[0], base=16) >> 16) & 0xff
+                        if pci_device_class == 3:
+                            continue
+                except OSError:
+                    print('Not able to access {}'.format(pci_class_path))
+                    continue
+            self.hwmons.append(i)
+            print("3. self.hwmons: ", self.hwmons)
+        if not self.hwmons:
+            print('Fan monitoring interface not found in SysFS')
+            raise SystemExit(0)
+
+    def get_rpm(self):
+        result = {}
+        for p in self.hwmons:
+            try:
+                with open(p, 'rt') as f:
+                    fan_mon_name = os.path.relpath(p, '/sys/class/hwmon')
+                    result[fan_mon_name] = int(f.read())
+            except OSError:
+                print('Fan SysFS node disappeared ({})'.format(p))
+        return result
+
+    def get_average_rpm(self, period):
+        acc = self.get_rpm()
+        for i in range(period):
+            time.sleep(1)
+            rpms = self.get_rpm()
+            for k, v in acc.items():
+                acc[k] += rpms[k]
+        for k, v in acc.items():
+            acc[k] /= period + 1
+        return acc
 
 
 class FanMonitorTests(unittest.TestCase):
-    """Tests for several type of sysfs hwmon fan files."""
-
     @mock.patch('glob.glob')
     @mock.patch.object(os.path, 'relpath', autospec=True)
     def test_simple(self, relpath_mock, glob_mock):
@@ -106,3 +143,6 @@ class FanMonitorTests(unittest.TestCase):
                 self.assertTrue(fan_mon.hwmons[0].endswith('fan2_input'))
             self.assertEqual(
                 fan_mon.get_rpm(), {'hwmon6/fan2_input': 412})
+
+if __name__ == '__main__':
+    unittest.main()
