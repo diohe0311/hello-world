@@ -1,7 +1,5 @@
-FROM alpine:3.10
+FROM ubuntu:20.04
 
-# Copy your script and any other necessary files
 COPY test_fan_reaction.py /app/
 
-# Set the entry point
 ENTRYPOINT ["python", "/app/test_fan_reaction.py"]
