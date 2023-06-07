@@ -1,4 +1,4 @@
-FROM python:3.9-alpine
+FROM alpine:3.10
 
 # Copy your script and any other necessary files
 COPY test_fan_reaction.py /app/
