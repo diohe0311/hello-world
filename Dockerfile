@@ -1,9 +1,11 @@
-FROM ubuntu:18.04
+FROM alpine
 
-RUN apt update && apt install nginx -y
+RUN apk update && apk add --no-cache python3
 
-CMD service nginx start && /bin/bash
+WORKDIR /app
+COPY requirements.txt .
+RUN pip3 install -r requirements.txt
 
-COPY test_fan_reaction.py /app/
+COPY . .
 
-ENTRYPOINT ["python", "/app/test_fan_reaction.py"]
+CMD ["python3", "test_fan_reaction.py"]
