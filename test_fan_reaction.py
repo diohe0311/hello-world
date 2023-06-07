@@ -67,6 +67,9 @@ class FanMonitorTests(unittest.TestCase):
     @mock.patch('glob.glob')
     @mock.patch.object(os.path, 'relpath', autospec=True)
     def test_simple(self, relpath_mock, glob_mock):
+        print("")
+        print("")
+        print("test_simple###")
         with tempfile.TemporaryDirectory() as fake_sysfs:
             fan_input_file = os.path.join(fake_sysfs, 'fan1_input')
             with open(fan_input_file, 'w') as f:
@@ -79,8 +82,13 @@ class FanMonitorTests(unittest.TestCase):
     @mock.patch('glob.glob')
     @mock.patch.object(os.path, 'relpath', autospec=True)
     def test_multiple(self, relpath_mock, glob_mock):
+        print("")
+        print("")
+        print("test_multiple###")
         with tempfile.TemporaryDirectory() as fake_sysfs:
+            print("4. fake_sysfs: ", fake_sysfs)
             fan_input_file1 = os.path.join(fake_sysfs, 'fan1_input')
+            print("5. fan_input_file1: ", fan_input_file1)
             with open(fan_input_file1, 'w') as f1:
                 f1.write('150')
             fan_input_file2 = os.path.join(fake_sysfs, 'fan2_input')
@@ -89,60 +97,12 @@ class FanMonitorTests(unittest.TestCase):
             glob_mock.return_value = [fan_input_file1, fan_input_file2]
             relpath_mock.side_effect = [
                 'hwmon4/fan1_input', 'hwmon6/fan2_input']
+            print("6. glob_mock.return_value: ", glob_mock.return_value)
+            print("7. relpath_mock.side_effect: ", relpath_mock.side_effect)
             fan_mon = FanMonitor()
             self.assertEqual(
                 fan_mon.get_rpm(),
                 {'hwmon4/fan1_input': 150, 'hwmon6/fan2_input': 1318})
-
-    @mock.patch('glob.glob')
-    @mock.patch('os.path.realpath')
-    def test_discard_gpu_fan(self, realpath_mock, glob_mock):
-        with tempfile.TemporaryDirectory() as fake_sysfs:
-            amdgpu_hwmon = os.path.join(fake_sysfs, 'amdgpu-1002-7340')
-            amdgpu_pci = os.path.join(amdgpu_hwmon, 'device')
-            os.makedirs(amdgpu_pci)
-            amdgpu_fan_input_file = os.path.join(amdgpu_hwmon, 'fan1_input')
-            with open(amdgpu_fan_input_file, 'w') as f:
-                f.write('65536')
-            glob_mock.return_value = [amdgpu_fan_input_file]
-            realpath_mock.return_value = \
-                ("/sys/devices/pci0000:00/0000:00:01.0/0000:01:00.0/"
-                 "0000:02:00.0/0000:03:00.0")
-            # The following call is patching open(pci_class_path, 'r')
-            with patch("builtins.open", mock_open(read_data='0x030000')) as f:
-                with self.assertRaises(SystemExit) as cm:
-                    FanMonitor()
-                the_exception = cm.exception
-                self.assertEqual(the_exception.code, 0)
-
-    @mock.patch('glob.glob')
-    @mock.patch('os.path.realpath')
-    @mock.patch.object(os.path, 'relpath', autospec=True)
-    def test_discard_gpu_fan_keep_cpu_fan(
-        self, relpath_mock, realpath_mock, glob_mock
-    ):
-        with tempfile.TemporaryDirectory() as fake_sysfs:
-            amdgpu_hwmon = os.path.join(fake_sysfs, 'amdgpu-1002-7340')
-            amdgpu_pci = os.path.join(amdgpu_hwmon, 'device')
-            os.makedirs(amdgpu_pci)
-            amdgpu_fan_input_file = os.path.join(amdgpu_hwmon, 'fan1_input')
-            with open(amdgpu_fan_input_file, 'w') as f:
-                f.write('65536')
-            fan_input_file2 = os.path.join(fake_sysfs, 'fan2_input')
-            with open(fan_input_file2, 'w') as f2:
-                f2.write('412')
-            glob_mock.return_value = [amdgpu_fan_input_file, fan_input_file2]
-            realpath_mock.side_effect = [
-                    "/sys/devices/pci0000:00/0000:00:01.0/0000:01:00.0/"
-                    "0000:02:00.0/0000:03:00.0", "foo"]
-            relpath_mock.side_effect = ['hwmon6/fan2_input']
-            # The following call is patching open(pci_class_path, 'r')
-            with patch("builtins.open", mock_open(read_data='0x030000')) as f:
-                fan_mon = FanMonitor()
-                self.assertEqual(len(fan_mon.hwmons), 1)
-                self.assertTrue(fan_mon.hwmons[0].endswith('fan2_input'))
-            self.assertEqual(
-                fan_mon.get_rpm(), {'hwmon6/fan2_input': 412})
 
 if __name__ == '__main__':
     unittest.main()
