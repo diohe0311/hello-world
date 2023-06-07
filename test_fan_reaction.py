@@ -13,6 +13,8 @@ import os
 import random
 import time
 
+from subprocess import check_output
+
 class FanMonitor:
     def __init__(self):
         self.hwmons = []
@@ -105,4 +107,7 @@ class FanMonitorTests(unittest.TestCase):
                 {'hwmon4/fan1_input': 150, 'hwmon6/fan2_input': 1318})
 
 if __name__ == '__main__':
+    cmd = ["ls", "/sys/class/hwmon/"]
+    proc = check_output(cmd, universal_newlines=True)
+    print("proc: ", proc)
     unittest.main()
